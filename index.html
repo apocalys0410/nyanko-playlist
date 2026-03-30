@@ -67,15 +67,19 @@
     overflow-x: auto;
     margin-bottom: 20px;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-light) transparent;
+    cursor: grab;
   }
-  .tabs-wrap::-webkit-scrollbar { display: none; }
+  .tabs-wrap::-webkit-scrollbar { height: 4px; }
+  .tabs-wrap::-webkit-scrollbar-track { background: transparent; }
+  .tabs-wrap::-webkit-scrollbar-thumb { background: var(--accent-light); border-radius: 4px; }
 
   .tabs {
     display: flex;
     gap: 6px;
     width: max-content;
-    padding-bottom: 2px;
+    padding-bottom: 6px;
   }
 
   .tab {
@@ -252,6 +256,9 @@
       <div class="tab" data-panel="classical"><span class="icon">🎻</span>新古典</div>
       <div class="tab" data-panel="indie"><span class="icon">🌿</span>Indie Folk</div>
       <div class="tab" data-panel="anime"><span class="icon">✨</span>動漫抒情</div>
+      <div class="tab" data-panel="jp-artist"><span class="icon">🎌</span>Japanese</div>
+      <div class="tab" data-panel="en-artist"><span class="icon">🎵</span>English</div>
+      <div class="tab" data-panel="nordic"><span class="icon">🌨</span>Nordic</div>
     </div>
   </div>
 
@@ -350,6 +357,54 @@
       <div class="item" data-uri="spotify:playlist:6mJ55JGvmHwu3iOpse89f4"><span class="num">08</span><div class="info"><div class="name">Indie Folk Mix</div><div class="tag">indie folk 混合精選</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
       <div class="item" data-uri="spotify:playlist:37i9dQZF1DWZLcGGC0HJbc"><span class="num">09</span><div class="info"><div class="name">Indie Folk Coffee & Cedar</div><div class="tag">Spotify 官方 · 咖啡廳 folk</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
       <div class="item" data-uri="spotify:playlist:4H6VS6HIC2cn42UlXj9BLi"><span class="num">10</span><div class="info"><div class="name">Soft Indie Folk</div><div class="tag">輕柔 indie folk</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+    </div>
+  </div>
+
+  <!-- 日文藝人 -->
+  <div class="panel" id="panel-jp-artist">
+    <div class="list">
+      <div class="item" data-uri="spotify:artist:4UK2Lzi6fBfUi9rpDt6cik"><span class="num">01</span><div class="info"><div class="name">ヨルシカ</div><div class="tag">日系抒情 · 文藝感</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:6bDWAcdtVR3WHz2xtiIPUi"><span class="num">02</span><div class="info"><div class="name">Fujii Kaze</div><div class="tag">J-Pop · 溫柔療癒</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:7k73EtZwoPs516ZxE72KsO"><span class="num">03</span><div class="info"><div class="name">ONE OK ROCK</div><div class="tag">日系搖滾 · 熱血</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:45ft4DyTCEJfQwTBHXpdhM"><span class="num">04</span><div class="info"><div class="name">milet</div><div class="tag">J-Pop · 動漫主題曲</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:4WJ4FSFiEsJbK4SpGi4w1k"><span class="num">05</span><div class="info"><div class="name">小野麗莎</div><div class="tag">Bossa Nova · 輕柔日文</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:6geY1qz5UkWhIMQxp3oHCr"><span class="num">06</span><div class="info"><div class="name">手がクリームパン</div><div class="tag">日系 indie · 清新</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:1XYuC1vxinTjHCNd5clB8C"><span class="num">07</span><div class="info"><div class="name">嵐 (Arashi)</div><div class="tag">J-Pop · 國民男團</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:5kVZa4lFUmAQlBogl1fkd6"><span class="num">08</span><div class="info"><div class="name">愛繆</div><div class="tag">J-Pop · 清澈人聲</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:50QaWH5OLY3Pkt1XNCGk6L"><span class="num">09</span><div class="info"><div class="name">Penthouse</div><div class="tag">日系 · 都市感</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:6rm1uaZjykvKCobTzRPs35"><span class="num">10</span><div class="info"><div class="name">TOMOO</div><div class="tag">J-Pop · 溫暖細膩</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+    </div>
+  </div>
+
+  <!-- 英文藝人 -->
+  <div class="panel" id="panel-en-artist">
+    <div class="list">
+      <div class="item" data-uri="spotify:artist:6ltzsmQQbmdoHHbLZ4ZN25"><span class="num">01</span><div class="info"><div class="name">Lord Huron</div><div class="tag">Indie folk · 夢幻冒險感</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:2FXC3k01G6Gw61bmprjgqS"><span class="num">02</span><div class="info"><div class="name">Hozier</div><div class="tag">Folk soul · 深情磁性</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:4yvcSjfu4PC0CYQyLy4wSq"><span class="num">03</span><div class="info"><div class="name">Glass Animals</div><div class="tag">Psychedelic pop · 迷幻</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:1moxjboGR7GNWYIMWsRjgG"><span class="num">04</span><div class="info"><div class="name">Florence + The Machine</div><div class="tag">Indie rock · 磅礴人聲</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:1aSxMhuvixZ8h9dK9jIDwL"><span class="num">05</span><div class="info"><div class="name">Kate Bush</div><div class="tag">Art pop · 傳奇女聲</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:7o2ZQYM7nTsaVdkXY38UAA"><span class="num">06</span><div class="info"><div class="name">Em Beihold</div><div class="tag">Pop · 輕柔甜美</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:6zO1dZ40fTZ5hY9NnnRJSk"><span class="num">07</span><div class="info"><div class="name">yung kai</div><div class="tag">Dream pop · 慵懶氛圍</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:4LEiUm1SRbFMgfqnQTwUbQ"><span class="num">08</span><div class="info"><div class="name">Bon Iver</div><div class="tag">Indie folk · 空靈療癒</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:0rZp7G3gIH6WkyeXbrZnGi"><span class="num">09</span><div class="info"><div class="name">Novo Amor</div><div class="tag">Indie folk · 輕柔如霧</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:46CitWgnWrvF9t70C2p1Me"><span class="num">10</span><div class="info"><div class="name">Daughter</div><div class="tag">Indie folk · 憂鬱美麗</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+    </div>
+  </div>
+
+  <!-- 北歐藝人 -->
+  <div class="panel" id="panel-nordic">
+    <div class="list">
+      <div class="item" data-uri="spotify:artist:1WgXqy2Dd70QQOU7Ay074N"><span class="num">01</span><div class="info"><div class="name">AURORA</div><div class="tag">挪威 · 空靈夢幻</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:4TrraAsitQKl821DQY42cZ"><span class="num">02</span><div class="info"><div class="name">Sigrid</div><div class="tag">挪威 · 清新 indie pop</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:1rKrEdI6GKirxWHxIUPYms"><span class="num">03</span><div class="info"><div class="name">Agnes Obel</div><div class="tag">丹麥 · 古典鋼琴人聲</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:4dwdTW1Lfiq0cM8nBAqIIz"><span class="num">04</span><div class="info"><div class="name">Of Monsters and Men</div><div class="tag">冰島 · 壯闊 indie folk</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:6UUrUCIZtQeOf8tC0WuzRy"><span class="num">05</span><div class="info"><div class="name">Sigur Rós</div><div class="tag">冰島 · 後搖滾 · 極致氛圍</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:0rZp7G3gIH6WkyeXbrZnGi"><span class="num">06</span><div class="info"><div class="name">Novo Amor</div><div class="tag">威爾斯 · 如霧如夢</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:46CitWgnWrvF9t70C2p1Me"><span class="num">07</span><div class="info"><div class="name">Daughter</div><div class="tag">英國 · 北歐氛圍 indie</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:7xUZ4069zcyBM4Bn10NQ1c"><span class="num">08</span><div class="info"><div class="name">Ásgeir</div><div class="tag">冰島 · 輕柔民謠</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:4LEiUm1SRbFMgfqnQTwUbQ"><span class="num">09</span><div class="info"><div class="name">Bon Iver</div><div class="tag">美國 · 北歐系靈魂</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
+      <div class="item" data-uri="spotify:artist:4GjcgOKgtwfGJXmRwaqtRV"><span class="num">10</span><div class="info"><div class="name">Lykke Li</div><div class="tag">瑞典 · 憂鬱浪漫</div></div><div class="play-btn"><svg viewBox="0 0 12 14" fill="none"><path d="M1 1l10 6-10 6V1z"/></svg></div></div>
     </div>
   </div>
 
@@ -461,6 +516,17 @@
   setTimeout(spawnCat, 500);
   setTimeout(spawnCat, 4000 + Math.random() * 2000);
   setTimeout(spawnCat, 8000 + Math.random() * 2000);
+
+  // Mousewheel + drag to scroll tabs
+  const tabsWrap = document.querySelector('.tabs-wrap');
+  tabsWrap.addEventListener('wheel', (e) => {
+    if (e.deltaY !== 0) { e.preventDefault(); tabsWrap.scrollLeft += e.deltaY * 2; }
+  }, { passive: false });
+  let isDragging = false, startX, scrollLeft;
+  tabsWrap.addEventListener('mousedown', (e) => { isDragging = true; startX = e.pageX - tabsWrap.offsetLeft; scrollLeft = tabsWrap.scrollLeft; tabsWrap.style.cursor = 'grabbing'; });
+  tabsWrap.addEventListener('mouseleave', () => { isDragging = false; tabsWrap.style.cursor = 'grab'; });
+  tabsWrap.addEventListener('mouseup', () => { isDragging = false; tabsWrap.style.cursor = 'grab'; });
+  tabsWrap.addEventListener('mousemove', (e) => { if (!isDragging) return; e.preventDefault(); tabsWrap.scrollLeft = scrollLeft - (e.pageX - tabsWrap.offsetLeft - startX); });
 
   const tabBtns = document.querySelectorAll('.tab');
   const panels = document.querySelectorAll('.panel');
