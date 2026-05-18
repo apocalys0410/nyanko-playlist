@@ -64,23 +64,23 @@
 
   /* Tabs */
   .tabs-wrap {
-    overflow-x: auto;
     margin-bottom: 20px;
+  }
+
+  /* Each row scrolls independently */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    padding-bottom: 6px;
+    overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: var(--accent-light) transparent;
     cursor: grab;
   }
-  .tabs-wrap::-webkit-scrollbar { height: 4px; }
-  .tabs-wrap::-webkit-scrollbar-track { background: transparent; }
-  .tabs-wrap::-webkit-scrollbar-thumb { background: var(--accent-light); border-radius: 4px; }
-
-  .tabs {
-    display: flex;
-    gap: 6px;
-    width: max-content;
-    padding-bottom: 6px;
-  }
+  .tabs::-webkit-scrollbar { height: 4px; }
+  .tabs::-webkit-scrollbar-track { background: transparent; }
+  .tabs::-webkit-scrollbar-thumb { background: var(--accent-light); border-radius: 4px; }
 
   .tabs-row2 {
     margin-top: 4px;
@@ -101,6 +101,7 @@
     white-space: nowrap;
     transition: all 0.2s;
     user-select: none;
+    flex-shrink: 0;
   }
 
   .tab:hover { border-color: var(--accent-light); color: var(--ink); }
@@ -633,16 +634,17 @@
   setTimeout(spawnCat, 4000 + Math.random() * 2000);
   setTimeout(spawnCat, 8000 + Math.random() * 2000);
 
-  // Mousewheel + drag to scroll tabs
-  const tabsWrap = document.querySelector('.tabs-wrap');
-  tabsWrap.addEventListener('wheel', (e) => {
-    if (e.deltaY !== 0) { e.preventDefault(); tabsWrap.scrollLeft += e.deltaY * 2; }
-  }, { passive: false });
-  let isDragging = false, startX, scrollLeft;
-  tabsWrap.addEventListener('mousedown', (e) => { isDragging = true; startX = e.pageX - tabsWrap.offsetLeft; scrollLeft = tabsWrap.scrollLeft; tabsWrap.style.cursor = 'grabbing'; });
-  tabsWrap.addEventListener('mouseleave', () => { isDragging = false; tabsWrap.style.cursor = 'grab'; });
-  tabsWrap.addEventListener('mouseup', () => { isDragging = false; tabsWrap.style.cursor = 'grab'; });
-  tabsWrap.addEventListener('mousemove', (e) => { if (!isDragging) return; e.preventDefault(); tabsWrap.scrollLeft = scrollLeft - (e.pageX - tabsWrap.offsetLeft - startX); });
+  // Mousewheel + drag to scroll tabs — each row scrolls independently
+  document.querySelectorAll('.tabs').forEach(row => {
+    row.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) { e.preventDefault(); row.scrollLeft += e.deltaY * 2; }
+    }, { passive: false });
+    let isDragging = false, startX, scrollLeft;
+    row.addEventListener('mousedown', (e) => { isDragging = true; startX = e.pageX - row.offsetLeft; scrollLeft = row.scrollLeft; row.style.cursor = 'grabbing'; });
+    row.addEventListener('mouseleave', () => { isDragging = false; row.style.cursor = 'grab'; });
+    row.addEventListener('mouseup', () => { isDragging = false; row.style.cursor = 'grab'; });
+    row.addEventListener('mousemove', (e) => { if (!isDragging) return; e.preventDefault(); row.scrollLeft = scrollLeft - (e.pageX - row.offsetLeft - startX); });
+  });
 
   const tabBtns = document.querySelectorAll('.tab');
   const panels = document.querySelectorAll('.panel');
