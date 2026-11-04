@@ -185,7 +185,7 @@ function renderPlaylists() {
   };
   const groups = (pickP ? 1 : 0) + (favList.length ? 1 : 0);
   renderList(el,
-    (pickP ? `<div class="group-label">🐾 貓咪老師推薦</div>` + row(pickP, '🐾') : '') +
+    (pickP ? `<div class="group-label pick-label">🐾 貓咪老師推薦<button type="button" class="linkish" id="dismiss-pick">收起</button></div>` + row(pickP, '🐾') : '') +
     (favList.length ? `<div class="group-label">♥ 收藏</div>` + favList.map(p => row(p, '♥')).join('') : '') +
     (groups && batch.length ? `<div class="group-label">這一批</div>` : '') +
     batch.map((p, idx) => row(p, pad(page * BATCH + idx + 1))).join(''));
@@ -239,7 +239,14 @@ document.getElementById('artist-tabs').addEventListener('click', e => {
   store.set('nyanko-artist-group', artistGroup);
   renderArtists();
 });
+// Put the cat's pick away (and its player, if that's what is playing)
+function dismissPick() {
+  if (!catPick) return;
+  if (openKey && openKey.endsWith(':' + catPick)) closePreview();
+  catPick = null;
+}
 document.getElementById('shuffle').addEventListener('click', () => {
+  dismissPick();
   const visible = order.filter(id => !hidden.has(id)).length;
   page = page + 1 >= Math.ceil(visible / BATCH) ? 0 : page + 1;
   if (page === 0) rebuildOrder();
@@ -250,6 +257,7 @@ document.getElementById('unhide').addEventListener('click', () => {
   hidden.clear(); store.set('nyanko-hidden', []); renderPlaylists();
 });
 document.getElementById('playlist-list').addEventListener('click', e => {
+  if (e.target.closest('#dismiss-pick')) { dismissPick(); renderPlaylists(); return; }
   const hb = e.target.closest('.hide-btn'), fb = e.target.closest('.fav-btn');
   if (!hb && !fb) return;
   e.preventDefault(); e.stopPropagation();
