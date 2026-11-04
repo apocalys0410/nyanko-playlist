@@ -16,20 +16,27 @@
   <header>
     <p class="kana">放鬆音樂歌單 · Relaxing Music</p>
     <h1>☕ 咖啡時光</h1>
-    <p class="sub">點 ▶ 直接在這裡試聽，點整列到 Spotify 開啟</p>
-    <p class="greet" id="greet"></p>
-    <div class="voice" id="voice"><span>貓咪老師說</span><button type="button" class="tab" data-voice="zh">中文</button><button type="button" class="tab" data-voice="ja">日本語</button></div>
-    <p class="cat-hint">試試點一下飄下來的貓咪老師 🐾</p>
+    <div class="greet-row"><p class="greet" id="greet"></p><div class="voice" id="voice"><button type="button" class="tab" data-voice="zh" aria-label="貓咪老師說中文">中</button><button type="button" class="tab" data-voice="ja" aria-label="貓咪老師說日本語">日</button></div></div>
+    <p class="sub">▶ 試聽 · 點整列開 Spotify · 點飄下來的貓咪老師有驚喜 🐾</p>
   </header>
 
-  <div class="filters" id="filters"></div>
-  <div class="meta-bar"><span id="count"></span><div class="actions"><button class="linkish" id="unhide" type="button" hidden></button><button class="linkish" id="reset" type="button">清除篩選</button><button class="shuffle" id="shuffle" type="button">🔀 換一批</button></div></div>
-  <div class="pomo" id="pomo" hidden></div>
-  <div class="list" id="playlist-list"></div>
+  <nav class="views" id="views" role="tablist">
+    <button type="button" role="tab" data-view="playlists">🎧 歌單</button>
+    <button type="button" role="tab" data-view="artists">🎤 歌手</button>
+  </nav>
 
-  <h2 class="section-title">探索歌手<small>點了會開啟歌手頁</small></h2>
-  <div class="frow"><div class="tabs" id="artist-tabs"></div></div>
-  <div class="list" id="artist-list" style="margin-top:12px"></div>
+  <section id="view-playlists" role="tabpanel">
+    <div class="filters" id="filters"></div>
+    <div class="meta-bar"><span id="count"></span><div class="actions"><button class="linkish" id="unhide" type="button" hidden></button><button class="linkish" id="reset" type="button">清除篩選</button><button class="shuffle" id="shuffle" type="button">🔀 換一批</button></div></div>
+    <div class="pomo" id="pomo" hidden></div>
+    <div class="list" id="playlist-list"></div>
+  </section>
+
+  <section id="view-artists" role="tabpanel" hidden>
+    <div class="frow"><div class="tabs" id="artist-tabs"></div></div>
+    <p class="artist-hint">點了會開啟歌手頁 · ▶ 先試聽熱門歌</p>
+    <div class="list" id="artist-list"></div>
+  </section>
 
   <div class="toast" id="toast" role="status" hidden></div>
   <footer>

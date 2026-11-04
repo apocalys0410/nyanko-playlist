@@ -108,12 +108,48 @@ function matches(p) {
   return true;
 }
 
+// 用途 is always visible; 人聲 / 類型 / 語言 live under a collapsible "更多篩選"
+let moreOpen = store.get('nyanko-more-open', false);
 function renderFilters() {
-  document.getElementById('filters').innerHTML = FILTERS.map(f =>
+  const rowHTML = f =>
     `<div class="frow"><span class="flabel">${f.label}</span><div class="tabs">` +
     f.opts.map(([k, t]) => `<button type="button" class="tab${state[f.key] === k ? ' active' : ''}" data-f="${f.key}" data-k="${k}">${t}</button>`).join('') +
-    `</div></div>`).join('');
+    `</div></div>`;
+  document.getElementById('filters').innerHTML = rowHTML(FILTERS[0]) +
+    `<button type="button" class="more-toggle" id="more-toggle" aria-expanded="false" aria-controls="more-filters"></button>` +
+    `<div class="more-filters" id="more-filters">${FILTERS.slice(1).map(rowHTML).join('')}</div>`;
+  syncMore();
 }
+function syncMore() {
+  const n = FILTERS.slice(1).filter(f => state[f.key]).length;
+  const t = document.getElementById('more-toggle');
+  t.innerHTML = `更多篩選 <span class="chev">${moreOpen ? '▴' : '▾'}</span>` + (n ? `<span class="more-count">${n}</span>` : '');
+  t.setAttribute('aria-expanded', moreOpen);
+  document.getElementById('more-filters').hidden = !moreOpen;
+  if (moreOpen) document.querySelectorAll('#more-filters .tabs').forEach(updateFade);
+}
+document.getElementById('filters').addEventListener('click', e => {
+  if (!e.target.closest('#more-toggle')) return;
+  moreOpen = !moreOpen; store.set('nyanko-more-open', moreOpen); syncMore();
+});
+
+// 歌單 / 歌手 views
+let view = store.get('nyanko-view', 'playlists');
+function showView(v) {
+  view = v === 'artists' ? 'artists' : 'playlists';
+  store.set('nyanko-view', view);
+  document.getElementById('view-playlists').hidden = view !== 'playlists';
+  document.getElementById('view-artists').hidden = view !== 'artists';
+  document.querySelectorAll('#views [data-view]').forEach(b => {
+    const on = b.dataset.view === view;
+    b.classList.toggle('active', on); b.setAttribute('aria-selected', on);
+  });
+  document.querySelectorAll(`#view-${view} .tabs`).forEach(updateFade);
+}
+document.getElementById('views').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]');
+  if (b) showView(b.dataset.view);
+});
 
 function renderPlaylists() {
   const byId = Object.fromEntries(PLAYLISTS.map(p => [p.id, p]));
@@ -161,6 +197,7 @@ function catPickPlaylist() {
   if (!pool.length) return null;
   const p = pool[Math.floor(Math.random() * pool.length)];
   catPick = p.id;
+  showView('playlists');
   renderPlaylists();
   openPreview((p.t || 'playlist') + ':' + p.id);
   document.querySelector('#playlist-list .group-label').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -171,6 +208,7 @@ function catPickPlaylist() {
 // so their horizontal scroll position survives a selection.
 function syncFilters() {
   document.querySelectorAll('#filters button[data-f]').forEach(b => b.classList.toggle('active', state[b.dataset.f] === b.dataset.k));
+  syncMore();
 }
 function renderArtistTabs() {
   document.getElementById('artist-tabs').innerHTML = ARTIST_GROUPS.map(g =>
@@ -327,3 +365,4 @@ function bindScroll() {
 }
 
 rebuildOrder(); renderFilters(); renderArtistTabs(); renderPlaylists(); renderArtists(); bindScroll();
+showView(view);
