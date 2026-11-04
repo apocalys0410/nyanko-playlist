@@ -209,6 +209,9 @@
   .frow .tabs { flex: 1; min-width: 0; padding-bottom: 2px; }
   .tabs.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
   #count b { font-weight: 400; color: var(--ink-muted); }
+  [hidden] { display: none !important; }
+  .open-pref { display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 11px; }
+  .open-pref .tab { padding: 4px 10px; font-size: 11px; }
   button.play-btn { border: 0; padding: 0; cursor: pointer; }
   .play-btn.open { background: var(--accent); }
   .play-btn.open svg path { fill: #fff; }
@@ -218,6 +221,11 @@
   .fav-btn.on svg { fill: #c96f6a; stroke: #c96f6a; }
   .fav-btn:active svg { transform: scale(1.25); }
   .item .hide-btn, .item .fav-btn { margin-right: -6px; }
+  .item .hide-btn { margin-right: 2px; opacity: 0.7; }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); z-index: 1000; display: flex; align-items: center; gap: 14px; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 20px; background: var(--ink); color: var(--paper); font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); }
+  .toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toast .linkish { color: var(--accent-light); font-size: 12px; flex-shrink: 0; }
+  @media (max-width: 480px) { .item .hide-btn { margin-right: 8px; } }
   .group-label { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.1em; margin: 6px 2px 0; }
   .group-label:first-child { margin-top: 0; }
   .embed { margin: -2px 0 4px; border-radius: 12px; overflow: hidden; background: var(--paper); }
@@ -319,8 +327,14 @@
   <div class="frow"><div class="tabs" id="artist-tabs"></div></div>
   <div class="list" id="artist-list" style="margin-top:12px"></div>
 
+  <div class="toast" id="toast" role="status" hidden></div>
   <footer>
-    <p>有裝 Spotify app 會直接跳到 app，沒有則開啟網頁版</p>
+    <div class="open-pref" id="open-pref">
+      <span>電腦點整列開啟</span>
+      <button type="button" class="tab" data-open="app">桌面 App</button>
+      <button type="button" class="tab" data-open="web">網頁版</button>
+    </div>
+    <p id="open-hint"></p>
   </footer>
 
 </div>
@@ -583,7 +597,7 @@
     const hb = e.target.closest('.hide-btn'), fb = e.target.closest('.fav-btn');
     if (!hb && !fb) return;
     e.preventDefault(); e.stopPropagation();
-    if (hb) { hidden.add(hb.dataset.hide); store.set('nyanko-hidden', [...hidden]); }
+    if (hb) { hidden.add(hb.dataset.hide); store.set('nyanko-hidden', [...hidden]); showUndo(hb.dataset.hide); }
     if (fb) {
       const id = fb.dataset.fav;
       if (favs.has(id)) { favs.delete(id); order.unshift(id); }   // un-favourite: drop back into the current batch
@@ -592,6 +606,24 @@
     }
     renderPlaylists();
   });
+  // ✕ is easy to hit by accident, so every hide gets a short-lived undo toast
+  let undoTimer = null;
+  function showUndo(id) {
+    const t = document.getElementById('toast');
+    const p = PLAYLISTS.find(x => x.id === id);
+    t.innerHTML = `<span>已隱藏「${esc(p ? p.n : '')}」</span><button type="button" class="linkish" data-undo="${id}">復原</button>`;
+    t.hidden = false;
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  }
+  document.getElementById('toast').addEventListener('click', e => {
+    const b = e.target.closest('[data-undo]');
+    if (!b) return;
+    hidden.delete(b.dataset.undo); store.set('nyanko-hidden', [...hidden]);
+    clearTimeout(undoTimer); document.getElementById('toast').hidden = true;
+    renderPlaylists();
+  });
+
   // ▶ toggles an inline Spotify player under the row instead of leaving the page
   document.addEventListener('click', e => {
     const b = e.target.closest('.play-btn[data-preview]');
@@ -606,10 +638,32 @@
     b.classList.add('open');
     b.closest('a.item').insertAdjacentHTML('afterend', embedHTML(type, id));
   }, true);
+  // Desktop (mouse) can hand the row to the Spotify desktop app via spotify: URIs;
+  // touch devices keep the https link, which iOS/Android already route to the app.
+  const isDesktop = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  let openMode = store.get('nyanko-open-mode', 'app');
+  function syncOpenPref() {
+    document.getElementById('open-pref').hidden = !isDesktop;
+    document.querySelectorAll('#open-pref [data-open]').forEach(b => b.classList.toggle('active', b.dataset.open === openMode));
+    document.getElementById('open-hint').textContent = !isDesktop
+      ? '有裝 Spotify app 會直接跳到 app，沒有則開啟網頁版'
+      : openMode === 'app' ? '需要電腦有裝 Spotify 桌面版；沒裝的話請切到「網頁版」' : '在瀏覽器開啟 Spotify 網頁版播放器';
+  }
+  document.getElementById('open-pref').addEventListener('click', e => {
+    const b = e.target.closest('[data-open]');
+    if (!b) return;
+    openMode = b.dataset.open; store.set('nyanko-open-mode', openMode); syncOpenPref();
+  });
+  syncOpenPref();
+
   // Clicking a row follows its link (opens Spotify); remember it as last played
   document.addEventListener('click', e => {
     const a = e.target.closest('a.item');
     if (!a || e.target.closest('button')) return;
+    if (isDesktop && openMode === 'app' && !(e.metaKey || e.ctrlKey || e.shiftKey)) {
+      e.preventDefault();
+      location.href = 'spotify:' + a.dataset.key;
+    }
     lastPlayed = a.dataset.key;
     store.set('nyanko-last', lastPlayed);
     document.querySelectorAll('a.item.active').forEach(i => i.classList.remove('active'));
