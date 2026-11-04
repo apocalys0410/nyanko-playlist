@@ -461,8 +461,21 @@
       `<div class="info"><div class="name">${esc(name)}${extra || ''}</div><div class="tag">${sub}</div></div>` +
       (ctl ? `<button type="button" class="fav-btn${favs.has(id) ? ' on' : ''}" data-fav="${id}" aria-label="收藏">${HEART_SVG}</button>` +
              (favs.has(id) ? '' : `<button type="button" class="hide-btn" data-hide="${id}" aria-label="不喜歡，換掉這個">✕</button>`) : '') +
-      `<button type="button" class="play-btn${openKey === key ? ' open' : ''}" data-preview="${key}" aria-label="試聽">${PLAY_SVG}</button></a>` +
-      (openKey === key ? embedHTML(type, id) : '');
+      `<button type="button" class="play-btn${openKey === key ? ' open' : ''}" data-preview="${key}" aria-label="試聽">${PLAY_SVG}</button></a>`;
+  }
+  // Swap a list's rows without touching an open preview player: moving or re-creating
+  // an iframe reloads it and stops playback, so the .embed node stays put and the new
+  // rows are inserted around it.
+  function renderList(el, html) {
+    const keep = el.querySelector(':scope > .embed');
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const nodes = [...tmp.childNodes];
+    const at = keep ? nodes.findIndex(n => n.dataset && n.dataset.key === openKey) : -1;
+    if (keep && at === -1) { keep.remove(); openKey = null; nodes.forEach(n => n.classList && n.querySelector('.play-btn.open')?.classList.remove('open')); }
+    if (at === -1) { el.replaceChildren(...nodes); return; }
+    [...el.childNodes].forEach(n => { if (n !== keep) n.remove(); });
+    nodes.forEach((n, i) => i <= at ? el.insertBefore(n, keep) : el.appendChild(n));
   }
   function embedHTML(type, id) {
     return `<div class="embed"><iframe src="https://open.spotify.com/embed/${type}/${id}?utm_source=generator&theme=0" ` +
@@ -507,8 +520,8 @@
     const el = document.getElementById('playlist-list');
     const favList = PLAYLISTS.filter(p => favs.has(p.id) && matches(p));
     if (!list.length && !favList.length) {
-      el.innerHTML = `<div class="empty">這個組合沒有歌單 🐾<br>` +
-        (state.l && state.v === 'inst' ? '純音樂歌單沒有語言之分，試著把「語言」改回不限。' : '試著放寬其中一個條件。') + `</div>`;
+      renderList(el, `<div class="empty">這個組合沒有歌單 🐾<br>` +
+        (state.l && state.v === 'inst' ? '純音樂歌單沒有語言之分，試著把「語言」改回不限。' : '試著放寬其中一個條件。') + `</div>`);
       return;
     }
     const row = (p, num) => {
@@ -516,17 +529,25 @@
       const sub = esc(p.d) + `<div class="chips">${chips}</div>`;
       return itemHTML(p.t || 'playlist', p.id, num, p.n, sub, p.o ? '<span class="badge">官方</span>' : '', true);
     };
-    el.innerHTML =
+    renderList(el,
       (favList.length ? `<div class="group-label">♥ 收藏</div>` + favList.map(p => row(p, '♥')).join('') +
         (list.length ? `<div class="group-label">這一批</div>` : '') : '') +
-      list.map((p, idx) => row(p, pad(page * BATCH + idx + 1))).join('');
+      list.map((p, idx) => row(p, pad(page * BATCH + idx + 1))).join(''));
   }
 
-  function renderArtists() {
+  // Chip rows are built once and only have their active class toggled afterwards,
+  // so their horizontal scroll position survives a selection.
+  function syncFilters() {
+    document.querySelectorAll('#filters button[data-f]').forEach(b => b.classList.toggle('active', state[b.dataset.f] === b.dataset.k));
+  }
+  function renderArtistTabs() {
     document.getElementById('artist-tabs').innerHTML = ARTIST_GROUPS.map(g =>
-      `<button type="button" class="tab${g.k === artistGroup ? ' active' : ''}" data-g="${g.k}">${g.label}</button>`).join('');
-    document.getElementById('artist-list').innerHTML = ARTISTS.filter(a => a.g === artistGroup)
-      .map((a, idx) => itemHTML('artist', a.id, pad(idx + 1), a.n, esc(a.d))).join('');
+      `<button type="button" class="tab" data-g="${g.k}">${g.label}</button>`).join('');
+  }
+  function renderArtists() {
+    document.querySelectorAll('#artist-tabs button[data-g]').forEach(b => b.classList.toggle('active', b.dataset.g === artistGroup));
+    renderList(document.getElementById('artist-list'), ARTISTS.filter(a => a.g === artistGroup)
+      .map((a, idx) => itemHTML('artist', a.id, pad(idx + 1), a.n, esc(a.d))).join(''));
   }
 
   document.getElementById('filters').addEventListener('click', e => {
@@ -534,12 +555,12 @@
     if (!b) return;
     state[b.dataset.f] = b.dataset.k;
     store.set('nyanko-filters', state);
-    rebuildOrder(); renderFilters(); renderPlaylists(); bindScroll();
+    rebuildOrder(); syncFilters(); renderPlaylists();
   });
   document.getElementById('reset').addEventListener('click', () => {
     Object.assign(state, { u: '', v: '', i: '', l: '' });
     store.set('nyanko-filters', state);
-    rebuildOrder(); renderFilters(); renderPlaylists(); bindScroll();
+    rebuildOrder(); syncFilters(); renderPlaylists();
   });
   document.getElementById('artist-tabs').addEventListener('click', e => {
     const b = e.target.closest('button[data-g]');
@@ -599,7 +620,10 @@
   function updateFade(row) { row.classList.toggle('more', row.scrollLeft + row.clientWidth < row.scrollWidth - 4); }
   window.addEventListener('resize', () => document.querySelectorAll('.tabs').forEach(updateFade));
 
-  // Mousewheel + drag to scroll chip rows (rows are re-rendered, so bind once per element)
+  // Mousewheel + drag to scroll chip rows. Rows are created once; a single window
+  // mouseup ends whichever drag is in progress.
+  let dragRow = null;
+  window.addEventListener('mouseup', () => { if (dragRow) { dragRow.style.cursor = ''; dragRow = null; } });
   function bindScroll() {
     document.querySelectorAll('.tabs').forEach(row => {
       if (row.dataset.bound) return;
@@ -610,11 +634,10 @@
         if (row.scrollWidth <= row.clientWidth || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
         e.preventDefault(); row.scrollLeft += e.deltaY;
       }, { passive: false });
-      let down = false, moved = false, startX, startLeft;
-      row.addEventListener('mousedown', (e) => { down = true; moved = false; startX = e.pageX; startLeft = row.scrollLeft; });
-      window.addEventListener('mouseup', () => { down = false; row.style.cursor = ''; });
+      let moved = false, startX, startLeft;
+      row.addEventListener('mousedown', (e) => { dragRow = row; moved = false; startX = e.pageX; startLeft = row.scrollLeft; });
       row.addEventListener('mousemove', (e) => {
-        if (!down) return;
+        if (dragRow !== row) return;
         const dx = e.pageX - startX;
         if (Math.abs(dx) > 4) { moved = true; row.style.cursor = 'grabbing'; row.scrollLeft = startLeft - dx; }
       });
@@ -623,7 +646,7 @@
     });
   }
 
-  rebuildOrder(); renderFilters(); renderPlaylists(); renderArtists(); bindScroll();
+  rebuildOrder(); renderFilters(); renderArtistTabs(); renderPlaylists(); renderArtists(); bindScroll();
 </script>
 </body>
 </html>
