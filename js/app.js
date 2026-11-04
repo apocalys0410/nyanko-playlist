@@ -12,7 +12,39 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
 };
+// Time-of-day suggestion: on the first visit in each slot of each day the "use" filter
+// is pre-picked for that slot; anything chosen within the slot is respected until it ends.
+// Try another hour with ?hour=23
+const SLOTS = [
+  { from: 5, to: 10, use: 'upbeat' },
+  { from: 10, to: 17, use: 'cafe' },
+  { from: 17, to: 22, use: 'cozy' },
+  { from: 22, to: 29, use: 'sleep' },
+];
+const NOW = new Date();
+const forcedHour = parseInt(new URLSearchParams(location.search).get('hour'), 10);
+const HOUR = Number.isInteger(forcedHour) && forcedHour >= 0 && forcedHour < 24 ? forcedHour : NOW.getHours();
+const SLOT = SLOTS.find(s => (HOUR < 5 ? HOUR + 24 : HOUR) >= s.from && (HOUR < 5 ? HOUR + 24 : HOUR) < s.to);
+// A night slot that started yesterday (00:00–04:59) belongs to yesterday's date
+const slotDay = new Date(NOW.getTime() - (HOUR < 5 ? 864e5 : 0)).toDateString();
+const SLOT_ID = slotDay + '|' + SLOT.use;
 const state = Object.assign({ u: '', v: '', i: '', l: '' }, store.get('nyanko-filters', {}));
+const slotAuto = store.get('nyanko-slot', null) !== SLOT_ID;
+if (slotAuto) state.u = SLOT.use;
+function saveFilters() { store.set('nyanko-filters', state); store.set('nyanko-slot', SLOT_ID); }
+if (slotAuto) saveFilters();
+function renderGreeting() {
+  const label = FILTERS[0].opts.find(o => o[0] === SLOT.use)[1].replace(/^\S+\s/, '');
+  document.getElementById('greet').textContent = V().greet[SLOT.use] + (slotAuto ? V().auto(label) : '');
+  document.querySelectorAll('#voice [data-voice]').forEach(b => b.classList.toggle('active', b.dataset.voice === voice));
+}
+renderGreeting();
+document.getElementById('voice').addEventListener('click', e => {
+  const b = e.target.closest('[data-voice]');
+  if (!b) return;
+  voice = b.dataset.voice; store.set('nyanko-voice', voice); renderGreeting();
+});
+let catPick = null;
 let artistGroup = store.get('nyanko-artist-group', ARTIST_GROUPS[0].k);
 let lastPlayed = store.get('nyanko-last', null);
 let hidden = new Set(store.get('nyanko-hidden', []));
@@ -102,8 +134,10 @@ function renderPlaylists() {
   un.hidden = hidden.size === 0;
   un.textContent = `復原已隱藏 (${hidden.size})`;
   const el = document.getElementById('playlist-list');
-  const favList = PLAYLISTS.filter(p => favs.has(p.id) && matches(p));
-  if (!list.length && !favList.length) {
+  const pickP = catPick && byId[catPick] && matches(byId[catPick]) ? byId[catPick] : null;
+  const favList = PLAYLISTS.filter(p => favs.has(p.id) && matches(p) && p !== pickP);
+  const batch = list.filter(p => p !== pickP);
+  if (!batch.length && !favList.length && !pickP) {
     renderList(el, `<div class="empty">這個組合沒有歌單 🐾<br>` +
       (state.l && state.v === 'inst' ? '純音樂歌單沒有語言之分，試著把「語言」改回不限。' : '試著放寬其中一個條件。') + `</div>`);
     return;
@@ -113,10 +147,24 @@ function renderPlaylists() {
     const sub = esc(p.d) + `<div class="chips">${chips}</div>`;
     return itemHTML(p.t || 'playlist', p.id, num, p.n, sub, p.o ? '<span class="badge">官方</span>' : '', true);
   };
+  const groups = (pickP ? 1 : 0) + (favList.length ? 1 : 0);
   renderList(el,
-    (favList.length ? `<div class="group-label">♥ 收藏</div>` + favList.map(p => row(p, '♥')).join('') +
-      (list.length ? `<div class="group-label">這一批</div>` : '') : '') +
-    list.map((p, idx) => row(p, pad(page * BATCH + idx + 1))).join(''));
+    (pickP ? `<div class="group-label">🐾 貓咪老師推薦</div>` + row(pickP, '🐾') : '') +
+    (favList.length ? `<div class="group-label">♥ 收藏</div>` + favList.map(p => row(p, '♥')).join('') : '') +
+    (groups && batch.length ? `<div class="group-label">這一批</div>` : '') +
+    batch.map((p, idx) => row(p, pad(page * BATCH + idx + 1))).join(''));
+}
+
+// Called by nyanko.js when a falling Nyanko-sensei is clicked
+function catPickPlaylist() {
+  const pool = PLAYLISTS.filter(p => matches(p) && !hidden.has(p.id) && p.id !== catPick);
+  if (!pool.length) return null;
+  const p = pool[Math.floor(Math.random() * pool.length)];
+  catPick = p.id;
+  renderPlaylists();
+  openPreview((p.t || 'playlist') + ':' + p.id);
+  document.querySelector('#playlist-list .group-label').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return p;
 }
 
 // Chip rows are built once and only have their active class toggled afterwards,
@@ -138,12 +186,12 @@ document.getElementById('filters').addEventListener('click', e => {
   const b = e.target.closest('button[data-f]');
   if (!b) return;
   state[b.dataset.f] = b.dataset.k;
-  store.set('nyanko-filters', state);
+  saveFilters(); catPick = null;
   rebuildOrder(); syncFilters(); renderPlaylists();
 });
 document.getElementById('reset').addEventListener('click', () => {
   Object.assign(state, { u: '', v: '', i: '', l: '' });
-  store.set('nyanko-filters', state);
+  saveFilters(); catPick = null;
   rebuildOrder(); syncFilters(); renderPlaylists();
 });
 document.getElementById('artist-tabs').addEventListener('click', e => {
@@ -200,14 +248,22 @@ document.addEventListener('click', e => {
   if (!b) return;
   e.preventDefault(); e.stopPropagation();
   const key = b.dataset.preview;
+  if (openKey === key) closePreview(); else openPreview(key, b.closest('a.item'));
+}, true);
+function closePreview() {
   document.querySelectorAll('.embed').forEach(x => x.remove());
   document.querySelectorAll('.play-btn.open').forEach(x => x.classList.remove('open'));
-  if (openKey === key) { openKey = null; return; }
+  openKey = null;
+}
+function openPreview(key, row) {
+  closePreview();
+  row = row || document.querySelector(`#playlist-list a.item[data-key="${key}"]`);
+  if (!row) return;
   openKey = key;
   const [type, id] = key.split(':');
-  b.classList.add('open');
-  b.closest('a.item').insertAdjacentHTML('afterend', embedHTML(type, id));
-}, true);
+  row.querySelector('.play-btn').classList.add('open');
+  row.insertAdjacentHTML('afterend', embedHTML(type, id));
+}
 // Desktop (mouse) can hand the row to the Spotify desktop app via spotify: URIs;
 // touch devices keep the https link, which iOS/Android already route to the app.
 const isDesktop = matchMedia('(hover: hover) and (pointer: fine)').matches;
