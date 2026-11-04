@@ -236,11 +236,15 @@ function spawnCat() {
   sakura.appendChild(p);
   // Remove after one full fall. Uses the animation's own clock, so a cat that
   // was paused to talk finishes its fall instead of vanishing mid-screen.
-  p.addEventListener('animationiteration', () => {
+  // Only the cat's own fall counts: the golden cat's image runs a looping glow
+  // animation whose iteration events bubble up here too.
+  p.addEventListener('animationiteration', function done(e) {
+    if (e.target !== p) return;
+    p.removeEventListener('animationiteration', done);
     p.remove();
     activeCats--;
     setTimeout(spawnCat, 500 + Math.random() * 1000);
-  }, { once: true });
+  });
 }
 
 setTimeout(spawnCat, 500);

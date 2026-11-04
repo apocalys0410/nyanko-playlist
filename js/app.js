@@ -200,10 +200,15 @@ function renderPlaylists() {
   un.hidden = hidden.size === 0;
   un.textContent = `復原已隱藏 (${hidden.size})`;
   const el = document.getElementById('playlist-list');
-  const pickP = catPick && byId[catPick] ? byId[catPick] : null;   // shown even if the cat had to relax filters
-  const favList = PLAYLISTS.filter(p => favs.has(p.id) && matches(p) && p !== pickP);
-  const batch = list.filter(p => p !== pickP);
-  if (!batch.length && !favList.length && !pickP) {
+  // Each playlist is rendered in exactly one group (rain → cat pick → favourites → batch):
+  // duplicate rows would share a data-key and confuse where the preview player sits.
+  const pickP = catPick && byId[catPick] && !hidden.has(catPick) ? byId[catPick] : null;   // shown even if the cat had to relax filters
+  const rainList = rainOn ? RAINY.map(id => byId[id]).filter(p => p && p !== pickP && !hidden.has(p.id)) : [];
+  const taken = new Set([...rainList.map(p => p.id), pickP && pickP.id]);
+  const favList = PLAYLISTS.filter(p => favs.has(p.id) && matches(p) && !taken.has(p.id));
+  favList.forEach(p => taken.add(p.id));
+  const batch = list.filter(p => !taken.has(p.id));
+  if (!batch.length && !favList.length && !pickP && !rainList.length) {
     renderList(el, `<div class="empty">這個組合沒有歌單 🐾<br>` +
       (state.l && state.v === 'inst' ? '純音樂歌單沒有語言之分，試著把「語言」改回不限。' : '試著放寬其中一個條件。') + `</div>`);
     return;
@@ -213,7 +218,6 @@ function renderPlaylists() {
     const sub = esc(p.d) + `<div class="chips">${chips}</div>`;
     return itemHTML(p.t || 'playlist', p.id, num, p.n, sub, p.o ? '<span class="badge">官方</span>' : '', true);
   };
-  const rainList = rainOn ? RAINY.map(id => byId[id]).filter(p => p && p !== pickP && !hidden.has(p.id)) : [];
   const groups = (pickP ? 1 : 0) + (favList.length ? 1 : 0) + (rainList.length ? 1 : 0);
   renderList(el,
     (rainList.length ? `<div class="group-label">🌧 下雨天</div>` + rainList.map(p => row(p, '🌧')).join('') : '') +
@@ -310,7 +314,10 @@ document.getElementById('playlist-list').addEventListener('click', e => {
   const hb = e.target.closest('.hide-btn'), fb = e.target.closest('.fav-btn');
   if (!hb && !fb) return;
   e.preventDefault(); e.stopPropagation();
-  if (hb) { hidden.add(hb.dataset.hide); store.set('nyanko-hidden', [...hidden]); showUndo(hb.dataset.hide); }
+  if (hb) {
+    hidden.add(hb.dataset.hide); store.set('nyanko-hidden', [...hidden]); showUndo(hb.dataset.hide);
+    if (hb.dataset.hide === catPick) dismissPick();   // hiding the cat's pick also puts the pick away
+  }
   if (fb) {
     const id = fb.dataset.fav;
     if (favs.has(id)) { favs.delete(id); order.unshift(id); }   // un-favourite: drop back into the current batch
