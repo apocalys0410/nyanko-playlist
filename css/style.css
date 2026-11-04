@@ -357,22 +357,44 @@ header .sub { margin-top: 6px; font-size: 11px; color: var(--ink-faint); }
 .artist-hint { margin: 10px 2px 12px; font-size: 11px; color: var(--ink-faint); }
 
 /* ---------- Collapsible filters ---------- */
-.more-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; margin-left: 42px; padding: 2px 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--ink-muted); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.more-toggle .chev { font-size: 10px; }
-.more-count { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 10px; line-height: 16px; text-align: center; }
+.tab.more-toggle { gap: 8px; border-style: dashed; max-width: 100%; }
+.tab.more-toggle span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.tab.more-toggle .chev { font-size: 9px; opacity: 0.7; }
+.tab.more-toggle.has { border-style: solid; border-color: var(--accent); color: var(--accent); }
 .more-filters { display: flex; flex-direction: column; gap: 8px; }
 
-/* ---------- Wide screens: use the space instead of a thin centre column ---------- */
+/* ---------- Wide screens: a roomier single column (no split cards) ---------- */
 @media (min-width: 900px) {
-  .wrap { max-width: 1040px; }
-  .list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; gap: 8px; }
-  .list > .group-label, .list > .embed, .list > .empty { grid-column: 1 / -1; }
-  .list > .embed { margin: 0; }
+  .wrap { max-width: 800px; }
   .views { max-width: 360px; margin-left: auto; margin-right: auto; }
-}
-@media (min-width: 1400px) {
-  .wrap { max-width: 1320px; }
-  .list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 .pick-label { display: flex; justify-content: space-between; align-items: center; }
 .pick-label .linkish { letter-spacing: 0; }
+
+/* ---------- Rare golden Nyanko-sensei ---------- */
+.sakura-container .cat.rare img { animation: glow 1.6s ease-in-out infinite alternate; }
+@keyframes glow {
+  from { filter: drop-shadow(0 0 6px rgba(255, 210, 90, 0.7)) brightness(1.05); }
+  to   { filter: drop-shadow(0 0 18px rgba(255, 200, 60, 1)) brightness(1.18) saturate(1.2); }
+}
+.cat-bubble em { white-space: pre-line; display: block; margin-top: 6px; font-style: normal; font-size: 12px; color: var(--green); }
+
+/* ---------- Rain ---------- */
+.rain-btn { padding: 2px 8px; }
+.sakura-container.raining > :not(.cat):not(.raindrop) { display: none; }
+.raindrop { position: absolute; top: -40px; width: 1.5px; background: linear-gradient(to bottom, transparent, rgba(170, 195, 230, 0.9)); animation: rainfall linear infinite; transform: rotate(12deg); }
+@keyframes rainfall { from { transform: translate(0, -40px) rotate(12deg); } to { transform: translate(-22vh, 110vh) rotate(12deg); } }
+
+/* ---------- 圖鑑 ---------- */
+.dex-btn { display: inline-block; margin-bottom: 12px; padding: 5px 12px; border: 0.5px solid var(--line); border-radius: 16px; background: var(--paper); font: inherit; font-size: 12px; color: var(--ink-muted); cursor: pointer; }
+.dex-btn b { font-weight: 400; color: var(--accent); margin-left: 4px; }
+.dex-card { width: min(420px, 100%); max-height: 90vh; overflow-y: auto; }
+.dex-card h3 { font-family: 'Shippori Mincho', serif; font-weight: 500; font-size: 16px; margin-bottom: 12px; color: var(--ink); }
+.dex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.dex-cell { margin: 0; padding: 6px; border-radius: 10px; background: var(--bg); border: 0.5px solid var(--line); }
+.dex-cell img, .pomo-card .dex-cell img { width: 100%; margin: 0; aspect-ratio: 1; object-fit: contain; display: block; }
+.dex-cell.rare { border-color: #e0b84a; }
+.dex-cell.rare img { filter: drop-shadow(0 0 6px rgba(255, 200, 60, 0.9)) brightness(1.12); }
+.dex-cell.locked span { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; font-size: 24px; color: var(--ink-faint); }
+.dex-cell figcaption { font-size: 10px; color: var(--ink-faint); margin-top: 4px; }
+.dex-hint { font-size: 11px; color: var(--ink-faint); margin-bottom: 12px; }

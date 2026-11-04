@@ -3,7 +3,7 @@ const FILTERS = [
   { key: 'u', label: '用途', opts: [['', '全部'], ['study', '📚 讀書'], ['cafe', '☕ 咖啡時間'], ['sleep', '🌙 睡覺'], ['spa', '🧖 Spa 冥想'], ['upbeat', '☀️ 輕快'], ['cozy', '🧸 Cozy / Chill']] },
   { key: 'v', label: '人聲', opts: [['', '都可以'], ['inst', '無人聲'], ['vocal', '有人聲']] },
   { key: 'i', label: '類型', opts: [['', '不限'], ['piano', '🎹 純鋼琴'], ['orch', '🎻 交響 / 配樂'], ['jazz', '🎷 爵士'], ['guitar', '🎸 吉他 / Bossa'], ['blues', '🎺 藍調'], ['lofi', '🎧 Lo-fi']] },
-  { key: 'l', label: '語言', opts: [['', '不限'], ['zh', '華語'], ['jp', '日文'], ['kr', '韓文'], ['en', '英文'], ['es', '西語']] },
+  { key: 'l', label: '語言', opts: [['', '不限'], ['jp', '日文'], ['kr', '韓文'], ['en', '英文'], ['es', '西語'], ['zh', '華語']] },
 ];
 const LABEL = { inst: '無人聲', vocal: '有人聲', mix: '人聲＋純音樂', piano: '鋼琴', guitar: '吉他', jazz: '爵士', lofi: 'Lo-fi', orch: '交響', blues: '藍調' };
 const USE_LABEL = Object.fromEntries(FILTERS[0].opts.slice(1).map(([k, t]) => [k, t.replace(/^\S+\s/, '')]));
@@ -33,17 +33,26 @@ const slotAuto = store.get('nyanko-slot', null) !== SLOT_ID;
 if (slotAuto) state.u = SLOT.use;
 function saveFilters() { store.set('nyanko-filters', state); store.set('nyanko-slot', SLOT_ID); }
 if (slotAuto) saveFilters();
+// Rain mode: rain on screen, 用途 → Cozy, and a 🌧 group of rainy-day playlists on top
+const RAINY = ['37i9dQZF1DWYxwmBaMqxsl', '37i9dQZF1DXbcPC6Vvqudd', '37i9dQZF1DX4wta20PHgwo', '37i9dQZF1DX8ymr6UES7vc', '37i9dQZF1DXaImRpG7HXqp', '37i9dQZF1DWVqfgj8NZEp1'];
+let rainOn = store.get('nyanko-rain', false);
 function renderGreeting() {
   const label = FILTERS[0].opts.find(o => o[0] === SLOT.use)[1].replace(/^\S+\s/, '');
-  document.getElementById('greet').textContent = V().greet[SLOT.use] + (slotAuto ? V().auto(label) : '');
+  document.getElementById('greet').textContent =
+    rainOn ? V().rain : (HOLIDAY ? V().holiday[HOLIDAY] : V().greet[SLOT.use]) + (slotAuto ? V().auto(label) : '');
   document.querySelectorAll('#voice [data-voice]').forEach(b => b.classList.toggle('active', b.dataset.voice === voice));
+  const rb = document.getElementById('rain-btn');
+  rb.classList.toggle('active', rainOn); rb.setAttribute('aria-pressed', rainOn);
+  renderDexButton();
 }
 renderGreeting();
+setRainParticles(rainOn);
 document.getElementById('voice').addEventListener('click', e => {
   const b = e.target.closest('[data-voice]');
   if (!b) return;
   voice = b.dataset.voice; store.set('nyanko-voice', voice); renderGreeting();
 });
+document.getElementById('dex-btn').addEventListener('click', openDex);
 let catPick = null;
 let artistGroup = store.get('nyanko-artist-group', ARTIST_GROUPS[0].k);
 let lastPlayed = store.get('nyanko-last', null);
@@ -99,13 +108,32 @@ function embedHTML(type, id) {
 }
 const pad = n => String(n).padStart(2, '0');
 
-function matches(p) {
-  if (state.u && !p.u.includes(state.u)) return false;
-  if (state.v === 'inst' && p.v !== 'inst') return false;
-  if (state.v === 'vocal' && p.v === 'inst') return false;
-  if (state.i && p.i !== state.i) return false;
-  if (state.l && p.l !== state.l) return false;
+function matches(p, s = state) {
+  if (s.u && !p.u.includes(s.u)) return false;
+  if (s.v === 'inst' && p.v !== 'inst') return false;
+  if (s.v === 'vocal' && p.v === 'inst') return false;
+  if (s.i && p.i !== s.i) return false;
+  if (s.l && p.l !== s.l) return false;
   return true;
+}
+// Hide any chip that would leave zero playlists given the other filters, so a dead-end
+// combination (e.g. 爵士 + 華語) can't be picked. The selected chip and 全部/不限 always stay.
+function syncFacets() {
+  const live = PLAYLISTS.filter(p => !hidden.has(p.id));
+  document.querySelectorAll('#filters button[data-f]').forEach(b => {
+    const { f, k } = b.dataset;
+    b.hidden = k !== '' && state[f] !== k && !live.some(p => matches(p, { ...state, [f]: k }));
+  });
+  // Hiding chips can shrink a row and shift it; keep each row's selected chip in view
+  document.querySelectorAll('#filters .tabs').forEach(row => {
+    const a = row.querySelector('.tab.active');
+    if (a && row.clientWidth) {
+      const left = a.offsetLeft - row.offsetLeft, right = left + a.offsetWidth;
+      if (left < row.scrollLeft) row.scrollLeft = left - 8;
+      else if (right > row.scrollLeft + row.clientWidth) row.scrollLeft = right - row.clientWidth + 8;
+    }
+    updateFade(row);
+  });
 }
 
 // 用途 is always visible; 人聲 / 類型 / 語言 live under a collapsible "更多篩選"
@@ -116,14 +144,15 @@ function renderFilters() {
     f.opts.map(([k, t]) => `<button type="button" class="tab${state[f.key] === k ? ' active' : ''}" data-f="${f.key}" data-k="${k}">${t}</button>`).join('') +
     `</div></div>`;
   document.getElementById('filters').innerHTML = rowHTML(FILTERS[0]) +
-    `<button type="button" class="more-toggle" id="more-toggle" aria-expanded="false" aria-controls="more-filters"></button>` +
+    `<div class="frow"><span class="flabel">更多</span><button type="button" class="tab more-toggle" id="more-toggle" aria-expanded="false" aria-controls="more-filters"></button></div>` +
     `<div class="more-filters" id="more-filters">${FILTERS.slice(1).map(rowHTML).join('')}</div>`;
   syncMore();
 }
 function syncMore() {
-  const n = FILTERS.slice(1).filter(f => state[f.key]).length;
+  const chosen = FILTERS.slice(1).filter(f => state[f.key]).map(f => f.opts.find(o => o[0] === state[f.key])[1].replace(/^\S+\s/, ''));
   const t = document.getElementById('more-toggle');
-  t.innerHTML = `更多篩選 <span class="chev">${moreOpen ? '▴' : '▾'}</span>` + (n ? `<span class="more-count">${n}</span>` : '');
+  t.innerHTML = `<span>${esc(chosen.length ? chosen.join(' · ') : '人聲 · 類型 · 語言')}</span><span class="chev">${moreOpen ? '▴' : '▾'}</span>`;
+  t.classList.toggle('has', chosen.length > 0);
   t.setAttribute('aria-expanded', moreOpen);
   document.getElementById('more-filters').hidden = !moreOpen;
   if (moreOpen) document.querySelectorAll('#more-filters .tabs').forEach(updateFade);
@@ -152,6 +181,7 @@ document.getElementById('views').addEventListener('click', e => {
 });
 
 function renderPlaylists() {
+  syncFacets();
   const byId = Object.fromEntries(PLAYLISTS.map(p => [p.id, p]));
   const visible = order.filter(id => !hidden.has(id));
   const pages = Math.max(1, Math.ceil(visible.length / BATCH));
@@ -170,7 +200,7 @@ function renderPlaylists() {
   un.hidden = hidden.size === 0;
   un.textContent = `復原已隱藏 (${hidden.size})`;
   const el = document.getElementById('playlist-list');
-  const pickP = catPick && byId[catPick] && matches(byId[catPick]) ? byId[catPick] : null;
+  const pickP = catPick && byId[catPick] ? byId[catPick] : null;   // shown even if the cat had to relax filters
   const favList = PLAYLISTS.filter(p => favs.has(p.id) && matches(p) && p !== pickP);
   const batch = list.filter(p => p !== pickP);
   if (!batch.length && !favList.length && !pickP) {
@@ -183,8 +213,10 @@ function renderPlaylists() {
     const sub = esc(p.d) + `<div class="chips">${chips}</div>`;
     return itemHTML(p.t || 'playlist', p.id, num, p.n, sub, p.o ? '<span class="badge">官方</span>' : '', true);
   };
-  const groups = (pickP ? 1 : 0) + (favList.length ? 1 : 0);
+  const rainList = rainOn ? RAINY.map(id => byId[id]).filter(p => p && p !== pickP && !hidden.has(p.id)) : [];
+  const groups = (pickP ? 1 : 0) + (favList.length ? 1 : 0) + (rainList.length ? 1 : 0);
   renderList(el,
+    (rainList.length ? `<div class="group-label">🌧 下雨天</div>` + rainList.map(p => row(p, '🌧')).join('') : '') +
     (pickP ? `<div class="group-label pick-label">🐾 貓咪老師推薦<button type="button" class="linkish" id="dismiss-pick">收起</button></div>` + row(pickP, '🐾') : '') +
     (favList.length ? `<div class="group-label">♥ 收藏</div>` + favList.map(p => row(p, '♥')).join('') : '') +
     (groups && batch.length ? `<div class="group-label">這一批</div>` : '') +
@@ -192,8 +224,25 @@ function renderPlaylists() {
 }
 
 // Called by nyanko.js when a falling Nyanko-sensei is clicked
-function catPickPlaylist() {
-  const pool = PLAYLISTS.filter(p => matches(p) && !hidden.has(p.id) && p.id !== catPick);
+// When nothing (new) matches, the cat relaxes filters one at a time — 用途 first,
+// since it is often auto-set by the time of day — and says which ones it dropped.
+const RELAX_ORDER = ['u', 'i', 'v', 'l'];
+function catPickPlaylist(rare) {
+  const relaxed = [];
+  const loose = { ...state };
+  const fits = p => (!loose.u || p.u.includes(loose.u)) && (loose.v !== 'inst' || p.v === 'inst') &&
+    (loose.v !== 'vocal' || p.v !== 'inst') && (!loose.i || p.i === loose.i) && (!loose.l || p.l === loose.l);
+  let pool = [];
+  for (let step = 0; ; step++) {
+    pool = PLAYLISTS.filter(p => fits(p) && !hidden.has(p.id) && p.id !== catPick);
+    if (pool.length) break;
+    const k = RELAX_ORDER.find(k => loose[k]);
+    if (!k) break;
+    loose[k] = ''; relaxed.push(FILTERS.find(f => f.key === k).label);
+  }
+  // The golden cat picks from your favourites and Spotify's own playlists when it can
+  const special = pool.filter(p => favs.has(p.id) || p.o);
+  if (rare && special.length) pool = special;
   if (!pool.length) return null;
   const p = pool[Math.floor(Math.random() * pool.length)];
   catPick = p.id;
@@ -201,7 +250,7 @@ function catPickPlaylist() {
   renderPlaylists();
   openPreview((p.t || 'playlist') + ':' + p.id);
   document.querySelector('#playlist-list .group-label').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  return p;
+  return { ...p, relaxed };
 }
 
 // Chip rows are built once and only have their active class toggled afterwards,
@@ -374,3 +423,10 @@ function bindScroll() {
 
 rebuildOrder(); renderFilters(); renderArtistTabs(); renderPlaylists(); renderArtists(); bindScroll();
 showView(view);
+
+document.getElementById('rain-btn').addEventListener('click', () => {
+  rainOn = !rainOn; store.set('nyanko-rain', rainOn);
+  setRainParticles(rainOn);
+  if (rainOn && state.u !== 'cozy') { state.u = 'cozy'; saveFilters(); catPick = null; rebuildOrder(); syncFilters(); }
+  renderGreeting(); renderPlaylists();
+});
