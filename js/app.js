@@ -2,10 +2,10 @@
 const FILTERS = [
   { key: 'u', label: '用途', opts: [['', '全部'], ['study', '📚 讀書'], ['cafe', '☕ 咖啡時間'], ['sleep', '🌙 睡覺'], ['spa', '🧖 Spa 冥想'], ['upbeat', '☀️ 輕快'], ['cozy', '🧸 Cozy / Chill']] },
   { key: 'v', label: '人聲', opts: [['', '都可以'], ['inst', '無人聲'], ['vocal', '有人聲']] },
-  { key: 'i', label: '類型', opts: [['', '不限'], ['piano', '🎹 純鋼琴'], ['orch', '🎻 交響 / 配樂'], ['jazz', '🎷 爵士'], ['guitar', '🎸 吉他 / Bossa'], ['blues', '🎺 藍調'], ['lofi', '🎧 Lo-fi']] },
+  { key: 'i', label: '類型', opts: [['', '不限'], ['piano', '🎹 純鋼琴'], ['orch', '🎻 古典 / 配樂'], ['jazz', '🎷 爵士'], ['guitar', '🎸 吉他 / Bossa'], ['blues', '🎺 藍調'], ['lofi', '🎧 Lo-fi'], ['ambient', '🌌 氛圍 / 自然音']] },
   { key: 'l', label: '語言', opts: [['', '不限'], ['jp', '日文'], ['kr', '韓文'], ['en', '英文'], ['es', '西語'], ['zh', '華語']] },
 ];
-const LABEL = { inst: '無人聲', vocal: '有人聲', mix: '人聲＋純音樂', piano: '鋼琴', guitar: '吉他', jazz: '爵士', lofi: 'Lo-fi', orch: '交響', blues: '藍調' };
+const LABEL = { inst: '無人聲', vocal: '有人聲', mix: '人聲＋純音樂', piano: '鋼琴', guitar: '吉他', jazz: '爵士', lofi: 'Lo-fi', orch: '古典配樂', blues: '藍調', ambient: '氛圍' };
 const USE_LABEL = Object.fromEntries(FILTERS[0].opts.slice(1).map(([k, t]) => [k, t.replace(/^\S+\s/, '')]));
 
 const store = {
@@ -31,7 +31,11 @@ const SLOT_ID = slotDay + '|' + SLOT.use;
 const state = Object.assign({ u: '', v: '', i: '', l: '' }, store.get('nyanko-filters', {}));
 const slotAuto = store.get('nyanko-slot', null) !== SLOT_ID;
 if (slotAuto) state.u = SLOT.use;
-function saveFilters() { store.set('nyanko-filters', state); store.set('nyanko-slot', SLOT_ID); }
+// Every filter change goes through here; other scripts (the pomodoro) listen for nyanko:filters
+function saveFilters() {
+  store.set('nyanko-filters', state); store.set('nyanko-slot', SLOT_ID);
+  document.dispatchEvent(new CustomEvent('nyanko:filters'));
+}
 if (slotAuto) saveFilters();
 // Rain mode: rain on screen, 用途 → Cozy, and a 🌧 group of rainy-day playlists on top
 const RAINY = ['37i9dQZF1DWYxwmBaMqxsl', '37i9dQZF1DXbcPC6Vvqudd', '37i9dQZF1DX4wta20PHgwo', '37i9dQZF1DX8ymr6UES7vc', '37i9dQZF1DXaImRpG7HXqp', '37i9dQZF1DWVqfgj8NZEp1'];
@@ -234,11 +238,9 @@ const RELAX_ORDER = ['u', 'i', 'v', 'l'];
 function catPickPlaylist(rare) {
   const relaxed = [];
   const loose = { ...state };
-  const fits = p => (!loose.u || p.u.includes(loose.u)) && (loose.v !== 'inst' || p.v === 'inst') &&
-    (loose.v !== 'vocal' || p.v !== 'inst') && (!loose.i || p.i === loose.i) && (!loose.l || p.l === loose.l);
   let pool = [];
   for (let step = 0; ; step++) {
-    pool = PLAYLISTS.filter(p => fits(p) && !hidden.has(p.id) && p.id !== catPick);
+    pool = PLAYLISTS.filter(p => matches(p, loose) && !hidden.has(p.id) && p.id !== catPick);
     if (pool.length) break;
     const k = RELAX_ORDER.find(k => loose[k]);
     if (!k) break;
@@ -320,7 +322,16 @@ document.getElementById('playlist-list').addEventListener('click', e => {
   }
   if (fb) {
     const id = fb.dataset.fav;
-    if (favs.has(id)) { favs.delete(id); order.unshift(id); }   // un-favourite: drop back into the current batch
+    if (favs.has(id)) {   // un-favourite: drop back into the current batch, unless it only showed up
+      favs.delete(id);    // as the cat's pick / a rainy-day row and doesn't fit the filters
+      const p = PLAYLISTS.find(x => x.id === id);
+      // …at the top of the page being looked at, so it stays in view
+      if (p && matches(p)) {
+        const firstShown = order.filter(x => !hidden.has(x))[page * BATCH];
+        const at = firstShown ? order.indexOf(firstShown) : order.length;
+        order.splice(at, 0, id);
+      }
+    }
     else { favs.add(id); order = order.filter(x => x !== id); hidden.delete(id); store.set('nyanko-hidden', [...hidden]); }
     store.set('nyanko-favs', [...favs]);
   }

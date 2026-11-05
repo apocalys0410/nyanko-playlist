@@ -57,7 +57,7 @@
       pop.addEventListener('click', e => {
         const b = e.target.closest('[data-pop]');
         if (!b) return;
-        pop.hidden = true;
+        closeDialog(pop);
         if (b.dataset.pop === 'go') start();
       });
     }
@@ -65,7 +65,7 @@
       `<p></p><div class="pomo-actions"><button type="button" class="shuffle" data-pop="go">${btn}</button>` +
       `<button type="button" class="linkish" data-pop="later">${later}</button></div></div>`;
     pop.querySelector('p').textContent = line;
-    pop.hidden = false;
+    openDialog(pop, '[data-pop="go"]', 'p');
   }
 
   el.addEventListener('click', e => {
@@ -74,9 +74,8 @@
     if (b.dataset.pomo === 'reset') reset();
     else if (t.endAt) pause(); else start();
   });
-  // Show/hide with the 讀書 filter (app.js handlers run first since they were bound earlier)
-  document.getElementById('filters').addEventListener('click', render);
-  document.getElementById('reset').addEventListener('click', render);
+  // Show/hide with the 讀書 filter, whatever changed 用途 (chips, 清除篩選, rain mode…)
+  document.addEventListener('nyanko:filters', render);
 
   if (t.endAt && remaining() <= 0) finish();   // a phase ended while the page was closed
   else if (t.endAt) run();
