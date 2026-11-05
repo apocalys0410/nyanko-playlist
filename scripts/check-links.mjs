@@ -6,7 +6,7 @@
 //
 //   node scripts/check-links.mjs          # everything
 //   node scripts/check-links.mjs --quiet  # only problems
-// Exits with 1 when any link is broken.
+// Exits with 1 when any link is broken, duplicated, or couldn't be checked.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -22,6 +22,9 @@ const items = [
 ];
 const dups = items.map(x => x.id).filter((id, i, all) => all.indexOf(id) !== i);
 
+const TRIES = 5;
+// Backs off 2s, 4s, 8s…, or as long as Spotify's Retry-After asks (capped at 30s)
+const sleep = (attempt, retryAfter) => new Promise(r => setTimeout(r, Math.min(30, Number(retryAfter) || 2 ** (attempt + 1)) * 1000));
 const norm = s => s.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 async function check({ type, id, name }) {
   const url = `https://open.spotify.com/oembed?url=https://open.spotify.com/${type}/${id}`;
@@ -29,14 +32,15 @@ async function check({ type, id, name }) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
       if (res.status === 404) return { status: 'broken', note: '404 — 已下架或 ID 錯誤' };
-      if (res.status === 429 && attempt < 3) { await new Promise(r => setTimeout(r, 2000 * (attempt + 1))); continue; }
+      if ((res.status === 429 || res.status >= 500) && attempt < TRIES) { await sleep(attempt, res.headers.get('retry-after')); continue; }
       if (!res.ok) return { status: 'error', note: `HTTP ${res.status}` };
       const { title = '' } = await res.json();
       // Only playlists get repurposed; artists and albums are shown under local names on purpose
       const a = norm(title), b = norm(name);
-      return type !== 'playlist' || a.includes(b) || b.includes(a) ? { status: 'ok' } : { status: 'renamed', note: `Spotify 上現在叫「${title}」` };
+      const same = a && b ? a.includes(b) || b.includes(a) : title === name;
+      return type !== 'playlist' || same ? { status: 'ok' } : { status: 'renamed', note: `Spotify 上現在叫「${title}」` };
     } catch (e) {
-      if (attempt < 2) continue;
+      if (attempt < TRIES) { await sleep(attempt); continue; }
       return { status: 'error', note: e.message };
     }
   }
@@ -45,7 +49,7 @@ async function check({ type, id, name }) {
 // A few requests at a time to stay polite to Spotify
 const results = new Array(items.length);
 let next = 0;
-await Promise.all(Array.from({ length: 6 }, async () => {
+await Promise.all(Array.from({ length: 4 }, async () => {
   while (next < items.length) { const i = next++; results[i] = await check(items[i]); }
 }));
 
@@ -59,4 +63,5 @@ items.forEach((it, i) => {
 });
 if (dups.length) console.log(`\n重複的 ID：${[...new Set(dups)].join(', ')}`);
 console.log(`\n共 ${items.length} 筆：正常 ${count.ok} · 改名 ${count.renamed} · 失效 ${count.broken} · 無法檢查 ${count.error}`);
-process.exit(count.broken || dups.length ? 1 : 0);
+// Anything that couldn't be checked fails too, so an offline / rate-limited run never passes silently
+process.exit(count.broken || count.error || dups.length ? 1 : 0);

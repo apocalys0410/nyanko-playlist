@@ -31,7 +31,11 @@ const SLOT_ID = slotDay + '|' + SLOT.use;
 const state = Object.assign({ u: '', v: '', i: '', l: '' }, store.get('nyanko-filters', {}));
 const slotAuto = store.get('nyanko-slot', null) !== SLOT_ID;
 if (slotAuto) state.u = SLOT.use;
-function saveFilters() { store.set('nyanko-filters', state); store.set('nyanko-slot', SLOT_ID); }
+// Every filter change goes through here; other scripts (the pomodoro) listen for nyanko:filters
+function saveFilters() {
+  store.set('nyanko-filters', state); store.set('nyanko-slot', SLOT_ID);
+  document.dispatchEvent(new CustomEvent('nyanko:filters'));
+}
 if (slotAuto) saveFilters();
 // Rain mode: rain on screen, 用途 → Cozy, and a 🌧 group of rainy-day playlists on top
 const RAINY = ['37i9dQZF1DWYxwmBaMqxsl', '37i9dQZF1DXbcPC6Vvqudd', '37i9dQZF1DX4wta20PHgwo', '37i9dQZF1DX8ymr6UES7vc', '37i9dQZF1DXaImRpG7HXqp', '37i9dQZF1DWVqfgj8NZEp1'];
@@ -321,7 +325,12 @@ document.getElementById('playlist-list').addEventListener('click', e => {
     if (favs.has(id)) {   // un-favourite: drop back into the current batch, unless it only showed up
       favs.delete(id);    // as the cat's pick / a rainy-day row and doesn't fit the filters
       const p = PLAYLISTS.find(x => x.id === id);
-      if (p && matches(p)) order.unshift(id);
+      // …at the top of the page being looked at, so it stays in view
+      if (p && matches(p)) {
+        const firstShown = order.filter(x => !hidden.has(x))[page * BATCH];
+        const at = firstShown ? order.indexOf(firstShown) : order.length;
+        order.splice(at, 0, id);
+      }
     }
     else { favs.add(id); order = order.filter(x => x !== id); hidden.delete(id); store.set('nyanko-hidden', [...hidden]); }
     store.set('nyanko-favs', [...favs]);

@@ -1,6 +1,9 @@
 // Nyanko-sensei: falling cats, seasonal / holiday / rain particles, click-to-pick,
 // rare golden cat, and the 圖鑑 (collection of the cats you've clicked).
 const sakura = document.getElementById('sakura');
+// Focusing a cat that is still above the top edge would scroll this clipped layer
+// and shift every petal; keep it pinned.
+sakura.addEventListener('scroll', () => { sakura.scrollTop = 0; sakura.scrollLeft = 0; });
 const params = new URLSearchParams(location.search);
 // Nyanko-sensei images (the user's own artwork — always use these, never substitutes)
 const catImgs = [
@@ -241,6 +244,7 @@ function spawnCat() {
   p.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); catClicked(p); }
   });
+  p.addEventListener('mousedown', e => e.preventDefault());   // a mouse click shouldn't move focus onto the cat
   sakura.appendChild(p);
   // Remove after one full fall. Uses the animation's own clock, so a cat that
   // was paused to talk finishes its fall instead of vanishing mid-screen.
@@ -249,6 +253,8 @@ function spawnCat() {
   p.addEventListener('animationiteration', function done(e) {
     if (e.target !== p) return;
     p.removeEventListener('animationiteration', done);
+    // Don't let focus fall to <body> with the cat: hand it to the next cat, else the 圖鑑 button
+    if (document.activeElement === p) (sakura.querySelector('.cat:not(:focus)') || document.getElementById('dex-btn'))?.focus();
     p.remove();
     activeCats--;
     setTimeout(spawnCat, 500 + Math.random() * 1000);
@@ -287,27 +293,45 @@ function openDex() {
     `<div class="dex-grid">${catImgs.map((src, i) => cell(src, src, 'No.' + String(i + 1).padStart(2, '0'))).join('')}` +
     cell('rare', catImgs[0], '★ ' + V().dexRare) + `</div>` +
     `<p class="dex-hint">${V().dexHint}</p><button type="button" class="shuffle" data-dex-close>${V().dexClose}</button></div>`;
-  openDialog(m, '[data-dex-close]');
+  openDialog(m, '[data-dex-close]', 'h3');
 }
 
 // ---------- Pop-up dialogs (圖鑑 here, the pomodoro cat in pomodoro.js) ----------
-// Opening moves focus into the dialog; Esc or closing hands it back to where it was.
-let dialogReturn = null;
-function openDialog(m, focusSel) {
-  if (!m.contains(document.activeElement)) dialogReturn = document.activeElement;
+// Dialogs stack (the pomodoro can end while the 圖鑑 is open): each remembers where
+// focus was when it opened and hands it back on close. Esc closes the top one, and
+// Tab stays inside it.
+const dialogStack = [];   // [{ m, ret }], last = on top
+function openDialog(m, focusSel, labelSel) {
+  const was = dialogStack.findIndex(d => d.m === m);
+  const ret = was >= 0 ? dialogStack.splice(was, 1)[0].ret : document.activeElement;
+  dialogStack.push({ m, ret });
+  document.body.appendChild(m);   // last in the DOM = drawn on top of other open dialogs
   m.setAttribute('aria-modal', 'true');
+  const label = labelSel && m.querySelector(labelSel);
+  if (label) { label.id = m.id + '-label'; m.setAttribute('aria-labelledby', label.id); }
   m.hidden = false;
   m.querySelector(focusSel)?.focus();
 }
 function closeDialog(m) {
+  const at = dialogStack.findIndex(d => d.m === m);
   m.hidden = true;
-  if (dialogReturn && dialogReturn.isConnected) dialogReturn.focus();
-  dialogReturn = null;
+  if (at === -1) return;
+  const { ret } = dialogStack.splice(at, 1)[0];
+  if (at < dialogStack.length) { dialogStack[at].ret = ret; return; }   // closed one under the top: pass its return point up
+  const top = dialogStack[dialogStack.length - 1];
+  (ret && ret.isConnected && !ret.closest('[hidden]') ? ret : top?.m.querySelector('button'))?.focus();
 }
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  const open = [...document.querySelectorAll('.pomo-pop')].find(m => !m.hidden);
-  if (open) closeDialog(open);
+  const top = dialogStack[dialogStack.length - 1];
+  if (!top) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeDialog(top.m); return; }
+  if (e.key !== 'Tab') return;
+  const f = [...top.m.querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])')].filter(x => !x.hidden);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (!top.m.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+  else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 });
 
 // ---------- Click a cat: it stops, talks, and picks a playlist ----------
