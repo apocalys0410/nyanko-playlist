@@ -233,6 +233,14 @@ function spawnCat() {
   p.style.animationDelay = '0s';
   p.style.opacity = rare ? 1 : 0.9;
   p.addEventListener('click', () => catClicked(p));
+  // Reachable from the keyboard too: Tab to a falling cat, Enter / Space to click it
+  p.tabIndex = 0;
+  p.setAttribute('role', 'button');
+  p.setAttribute('aria-label', rare ? '閃亮的貓咪老師（點我推薦歌單）' : '貓咪老師（點我推薦歌單）');
+  img.alt = '';
+  p.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); catClicked(p); }
+  });
   sakura.appendChild(p);
   // Remove after one full fall. Uses the animation's own clock, so a cat that
   // was paused to talk finishes its fall instead of vanishing mid-screen.
@@ -269,7 +277,7 @@ function openDex() {
   if (!m) {
     m = document.createElement('div');
     m.id = 'dex'; m.className = 'pomo-pop'; m.setAttribute('role', 'dialog');
-    m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-dex-close]')) m.hidden = true; });
+    m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-dex-close]')) closeDialog(m); });
     document.body.appendChild(m);
   }
   const cell = (key, src, label) => dex.has(key)
@@ -279,8 +287,28 @@ function openDex() {
     `<div class="dex-grid">${catImgs.map((src, i) => cell(src, src, 'No.' + String(i + 1).padStart(2, '0'))).join('')}` +
     cell('rare', catImgs[0], '★ ' + V().dexRare) + `</div>` +
     `<p class="dex-hint">${V().dexHint}</p><button type="button" class="shuffle" data-dex-close>${V().dexClose}</button></div>`;
-  m.hidden = false;
+  openDialog(m, '[data-dex-close]');
 }
+
+// ---------- Pop-up dialogs (圖鑑 here, the pomodoro cat in pomodoro.js) ----------
+// Opening moves focus into the dialog; Esc or closing hands it back to where it was.
+let dialogReturn = null;
+function openDialog(m, focusSel) {
+  if (!m.contains(document.activeElement)) dialogReturn = document.activeElement;
+  m.setAttribute('aria-modal', 'true');
+  m.hidden = false;
+  m.querySelector(focusSel)?.focus();
+}
+function closeDialog(m) {
+  m.hidden = true;
+  if (dialogReturn && dialogReturn.isConnected) dialogReturn.focus();
+  dialogReturn = null;
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = [...document.querySelectorAll('.pomo-pop')].find(m => !m.hidden);
+  if (open) closeDialog(open);
+});
 
 // ---------- Click a cat: it stops, talks, and picks a playlist ----------
 let bubbleTimer = null;

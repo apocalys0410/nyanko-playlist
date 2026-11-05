@@ -57,7 +57,7 @@
       pop.addEventListener('click', e => {
         const b = e.target.closest('[data-pop]');
         if (!b) return;
-        pop.hidden = true;
+        closeDialog(pop);
         if (b.dataset.pop === 'go') start();
       });
     }
@@ -65,7 +65,7 @@
       `<p></p><div class="pomo-actions"><button type="button" class="shuffle" data-pop="go">${btn}</button>` +
       `<button type="button" class="linkish" data-pop="later">${later}</button></div></div>`;
     pop.querySelector('p').textContent = line;
-    pop.hidden = false;
+    openDialog(pop, '[data-pop="go"]');
   }
 
   el.addEventListener('click', e => {
@@ -74,9 +74,10 @@
     if (b.dataset.pomo === 'reset') reset();
     else if (t.endAt) pause(); else start();
   });
-  // Show/hide with the 讀書 filter (app.js handlers run first since they were bound earlier)
+  // Show/hide with the 讀書 filter, wherever 用途 changes (app.js handlers run first since they were bound earlier)
   document.getElementById('filters').addEventListener('click', render);
   document.getElementById('reset').addEventListener('click', render);
+  document.getElementById('rain-btn').addEventListener('click', render);   // rain mode switches 用途 to Cozy
 
   if (t.endAt && remaining() <= 0) finish();   // a phase ended while the page was closed
   else if (t.endAt) run();

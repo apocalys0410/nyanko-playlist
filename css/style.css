@@ -305,6 +305,7 @@
 /* ---------- Clickable Nyanko-sensei ---------- */
 .sakura-container .cat { pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .sakura-container .cat.talking { animation-play-state: paused; }
+.sakura-container .cat:focus-visible { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 50%; animation-play-state: paused; }
 .sakura-container .cat.talking img { filter: drop-shadow(0 0 10px rgba(255, 220, 150, 0.8)); }
 .cat-bubble { position: fixed; z-index: 1001; padding: 10px 14px; border-radius: 14px; background: var(--paper); color: var(--ink); border: 0.5px solid var(--accent-light); box-shadow: 0 6px 20px rgba(0,0,0,0.18); font-size: 13px; line-height: 1.5; transform: translateY(-100%); pointer-events: none; animation: pop 0.2s ease-out; }
 .cat-bubble.below { transform: none; }
